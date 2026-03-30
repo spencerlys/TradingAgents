@@ -20,9 +20,19 @@ ANALYST_ORDER = [
 
 def get_ticker() -> str:
     """Prompt the user to enter a ticker symbol."""
+    import re
+
+    def validate_ticker(x: str) -> bool | str:
+        s = x.strip().upper()
+        if not s:
+            return "Please enter a ticker symbol."
+        if not re.match(r'^[A-Z0-9.\-]{1,20}$', s):
+            return "Only letters, digits, '.', and '-' are allowed (max 20 chars)."
+        return True
+
     ticker = questionary.text(
         f"Enter the exact ticker symbol to analyze ({TICKER_INPUT_EXAMPLES}):",
-        validate=lambda x: len(x.strip()) > 0 or "Please enter a valid ticker symbol.",
+        validate=validate_ticker,
         style=questionary.Style(
             [
                 ("text", "fg:green"),
@@ -40,7 +50,14 @@ def get_ticker() -> str:
 
 def normalize_ticker_symbol(ticker: str) -> str:
     """Normalize ticker input while preserving exchange suffixes."""
-    return ticker.strip().upper()
+    import re
+    normalized = ticker.strip().upper()
+    if not re.match(r'^[A-Z0-9.\-]{1,20}$', normalized):
+        raise ValueError(
+            f"Invalid ticker symbol '{normalized}'. "
+            "Only letters, digits, '.', and '-' are allowed (max 20 chars)."
+        )
+    return normalized
 
 
 def get_analysis_date() -> str:

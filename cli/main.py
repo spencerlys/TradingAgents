@@ -971,6 +971,7 @@ def run_analysis():
     report_dir.mkdir(parents=True, exist_ok=True)
     log_file = results_dir / "message_tool.log"
     log_file.touch(exist_ok=True)
+    log_file.chmod(0o600)
 
     def save_message_decorator(obj, func_name):
         func = getattr(obj, func_name)
@@ -1004,8 +1005,10 @@ def run_analysis():
                 if content:
                     file_name = f"{section_name}.md"
                     text = "\n".join(str(item) for item in content) if isinstance(content, list) else content
-                    with open(report_dir / file_name, "w") as f:
+                    report_path = report_dir / file_name
+                    with open(report_path, "w") as f:
                         f.write(text)
+                    report_path.chmod(0o600)
         return wrapper
 
     message_buffer.add_message = save_message_decorator(message_buffer, "add_message")
@@ -1185,13 +1188,17 @@ def run_analysis():
             "Save path (press Enter for default)",
             default=str(default_path)
         ).strip()
-        save_path = Path(save_path_str)
-        try:
-            report_file = save_report_to_disk(final_state, selections["ticker"], save_path)
-            console.print(f"\n[green]✓ Report saved to:[/green] {save_path.resolve()}")
-            console.print(f"  [dim]Complete report:[/dim] {report_file.name}")
-        except Exception as e:
-            console.print(f"[red]Error saving report: {e}[/red]")
+        save_path = Path(save_path_str).resolve()
+        home_dir = Path.home().resolve()
+        if not str(save_path).startswith(str(home_dir)):
+            console.print(f"[red]Save path must be within your home directory ({home_dir}). Skipping save.[/red]")
+        else:
+            try:
+                report_file = save_report_to_disk(final_state, selections["ticker"], save_path)
+                console.print(f"\n[green]✓ Report saved to:[/green] {save_path}")
+                console.print(f"  [dim]Complete report:[/dim] {report_file.name}")
+            except Exception as e:
+                console.print(f"[red]Error saving report: {e}[/red]")
 
     # Prompt to display full report
     display_choice = typer.prompt("\nDisplay full report on screen?", default="Y").strip().upper()
